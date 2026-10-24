@@ -116,6 +116,10 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 		}
 		respond(w, 200, a.store.Snapshot())
 	})
+	mux.HandleFunc("POST /api/pre-proxies", a.savePreProxy)
+	mux.HandleFunc("PUT /api/pre-proxies/{id}", a.savePreProxy)
+	mux.HandleFunc("DELETE /api/pre-proxies/{id}", a.deletePreProxy)
+	mux.HandleFunc("POST /api/nodes/batch-pre-proxy", a.batchPreProxy)
 	mux.HandleFunc("POST /api/nodes", a.addNode)
 	mux.HandleFunc("POST /api/nodes/convert", a.convertNodes)
 	mux.HandleFunc("PATCH /api/nodes/{id}", a.editNode)
@@ -465,10 +469,11 @@ func checkPort(st *State, port int, exceptID string) error {
 
 func (a *App) editNode(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name    *string `json:"name"`
-		Port    *int    `json:"port"`
-		Enabled *bool   `json:"enabled"`
-		YAML    *string `json:"yaml"`
+		Name       *string `json:"name"`
+		Port       *int    `json:"port"`
+		Enabled    *bool   `json:"enabled"`
+		YAML       *string `json:"yaml"`
+		PreProxyID *string `json:"preProxyId"`
 	}
 	if err := decode(r, &body); err != nil {
 		fail(w, 400, err.Error())
@@ -491,6 +496,16 @@ func (a *App) editNode(w http.ResponseWriter, r *http.Request) {
 			n := &st.Nodes[i]
 			if n.ID != r.PathValue("id") {
 				continue
+			}
+			bindingChanged := body.PreProxyID != nil && n.PreProxyID != *body.PreProxyID
+			if body.PreProxyID != nil {
+				if !hasPreProxy(st, *body.PreProxyID) {
+					return fmt.Errorf("前置代理不存在")
+				}
+				if bindingChanged {
+					n.PreProxyID = *body.PreProxyID
+					n.clearPreProxyResults()
+				}
 			}
 			if body.Name != nil {
 				if strings.TrimSpace(*body.Name) == "" || len(*body.Name) > 200 {
@@ -524,6 +539,10 @@ func (a *App) editNode(w http.ResponseWriter, r *http.Request) {
 				n.TestedAt = nil
 				n.TestError = ""
 				n.clearExitIP()
+			}
+			// Preserve existing PATCH behavior; only a binding-only no-op skips a revision.
+			if body.PreProxyID != nil && !bindingChanged && body.Name == nil && body.Port == nil && body.Enabled == nil && body.YAML == nil {
+				return nil
 			}
 			st.Revision++
 			st.event("info", "节点映射已更新："+n.Name)

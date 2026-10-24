@@ -35,6 +35,12 @@ type Subscription struct {
 	Info        []string   `json:"info,omitempty"`
 }
 
+type PreProxy struct {
+	ID     string         `json:"id"`
+	Name   string         `json:"name"`
+	Config map[string]any `json:"config"`
+}
+
 type Node struct {
 	ID              string         `json:"id"`
 	SubscriptionID  string         `json:"subscriptionId"`
@@ -51,6 +57,7 @@ type Node struct {
 	ExitIP          string         `json:"exitIp,omitempty"`
 	ExitIPCheckedAt *time.Time     `json:"exitIpCheckedAt,omitempty"`
 	ExitIPError     string         `json:"exitIpError,omitempty"`
+	PreProxyID      string         `json:"preProxyId,omitempty"`
 	Config          map[string]any `json:"config"`
 }
 
@@ -69,6 +76,7 @@ type State struct {
 	Settings        Settings       `json:"settings"`
 	Subscriptions   []Subscription `json:"subscriptions"`
 	Nodes           []Node         `json:"nodes"`
+	PreProxies      []PreProxy     `json:"preProxies"`
 	Events          []Event        `json:"events"`
 }
 
@@ -84,7 +92,7 @@ func initialState() State {
 	return State{Version: 1, Revision: 1,
 		Settings: Settings{PublicHost: "127.0.0.1", ListenHost: "0.0.0.0", PortStart: 20001, PortEnd: 20999,
 			Username: "portpilot", Password: randomID()[:24], ControllerURL: "http://127.0.0.1:9090", ControllerSecret: randomID(), TestURL: "https://www.gstatic.com/generate_204"},
-		Subscriptions: []Subscription{}, Nodes: []Node{}, Events: []Event{},
+		Subscriptions: []Subscription{}, Nodes: []Node{}, PreProxies: []PreProxy{}, Events: []Event{},
 	}
 }
 

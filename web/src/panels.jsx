@@ -25,11 +25,12 @@ function SubscriptionModal({ subscription, mutate, onClose }) {
   return <Modal title={subscription ? '编辑订阅' : '导入订阅'} subtitle="支持 Clash / Mihomo、分享链接和 Base64 订阅，自动分配固定端口。" onClose={onClose}><form onSubmit={submit}>{!subscription && <div className="segmented"><button type="button" className={mode === 'url' ? 'active' : ''} onClick={() => setMode('url')}><Link2 size={15} />订阅链接</button><button type="button" className={mode === 'yaml' ? 'active' : ''} onClick={() => setMode('yaml')}><FileText size={15} />粘贴内容</button></div>}<div className="form-grid"><Field label="订阅名称" wide><input value={name} onChange={e => setName(e.target.value)} required maxLength={100} autoFocus /></Field>{mode === 'url' ? <Field label="订阅地址" hint="链接中的 Token 仅保存在本机数据目录，不会写入源码。" wide><input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.com/subscribe?token=…" required={!subscription || !!subscription.url} autoComplete="off" /></Field> : <Field label="订阅内容" hint="支持 YAML / JSON、每行一个的分享链接或 Base64 内容。仅提取节点，不导入规则。" wide><textarea className="code-input" rows={8} value={content} onChange={e => setContent(e.target.value)} placeholder={'proxies:\n  - name: 我的节点\n    type: vless\n    ...'} required /></Field>}{mode === 'url' && <Field label="自动更新" wide><select value={interval} onChange={e => setInterval(e.target.value)}><option value="0">仅手动更新</option><option value="1">每 1 小时</option><option value="6">每 6 小时</option><option value="12">每 12 小时</option><option value="24">每 24 小时</option>{![0,1,6,12,24].includes(Number(interval)) && <option value={interval}>每 {interval} 小时</option>}</select></Field>}</div>{error && <div className="inline-error" role="alert">{error}</div>}<div className="modal-form-footer"><Button type="button" onClick={onClose}>取消</Button><Button variant="primary" type="submit" loading={loading}>{!loading && <Upload size={15} />}{subscription ? '保存订阅' : loading ? '正在获取节点…' : '导入并分配端口'}</Button></div></form></Modal>;
 }
 
-function NodeModal({ node, state, mutate, onClose }) {
+function NodeModal({ node, state, mutate, notify, onClose }) {
   const [name, setName] = useState(node?.name || '');
   const [port, setPort] = useState(node?.port || '');
   const [content, setContent] = useState(node ? JSON.stringify(node.config, null, 2) : '');
   const [enabled, setEnabled] = useState(node?.enabled ?? true);
+  const [preProxyId, setPreProxyId] = useState(node?.preProxyId || '');
   const [loading, setLoading] = useState(false);
   const [converting, setConverting] = useState(false);
   const [conversion, setConversion] = useState(null);
@@ -57,10 +58,15 @@ function NodeModal({ node, state, mutate, onClose }) {
     event.preventDefault(); setLoading(true); setError('');
     try {
       const body = node
-        ? { name, port: Number(port), enabled, ...(!node.subscriptionId ? { yaml: content } : {}) }
+        ? { name, port: Number(port), enabled, preProxyId, ...(!node.subscriptionId ? { yaml: content } : {}) }
         : { content, port: Number(port) || 0 };
-      await mutate(node ? `/nodes/${node.id}` : '/nodes', node ? 'PATCH' : 'POST', body,
-        node ? '节点映射已保存，应用后生效' : '节点已导入并分配端口，应用后生效');
+      if (node) {
+        const priorRevision = state.revision;
+        const result = await mutate(`/nodes/${node.id}`, 'PATCH', body);
+        notify(result?.revision > priorRevision ? '应用配置后生效' : '已保存');
+      } else {
+        await mutate('/nodes', 'POST', body, '节点已导入并分配端口，应用后生效');
+      }
       onClose();
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
@@ -97,6 +103,17 @@ function NodeModal({ node, state, mutate, onClose }) {
           hint={`可用范围 ${state.settings.portStart}–${state.settings.portEnd}${node ? '' : '。留空自动分配；批量导入时从指定端口连续分配。'}`} wide>
           <input type="number" value={port} onChange={e => setPort(e.target.value)} min={state.settings.portStart} max={state.settings.portEnd} required={!!node} placeholder="自动分配" />
         </Field>
+        {node && <Field label="前置代理" hint="通过前置代理中转此节点流量。选择“无”直接连接原节点服务器。" wide>
+          <select value={preProxyId} onChange={e => setPreProxyId(e.target.value)}>
+            <option value="">无（直接连接原节点）</option>
+            {(state.preProxies ?? []).map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+            {node.preProxyId && !(state.preProxies ?? []).some(p => p.id === node.preProxyId) && (
+              <option value={node.preProxyId} disabled>当前引用无效（{node.preProxyId}）</option>
+            )}
+          </select>
+        </Field>}
       </div>
       {node && <div className="setting-toggle"><div><strong>启用此节点</strong><p>停用后保留端口，但不生成监听入口。</p></div><Switch checked={enabled} label="启用此节点" onChange={setEnabled} /></div>}
       {error && <div className="inline-error" role="alert">{error}</div>}

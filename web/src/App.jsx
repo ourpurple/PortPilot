@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Activity, ArrowRight, BookOpen, CheckCircle2, CircleHelp, FileCode2, FolderSync, LayoutDashboard, Loader2, LogOut, Menu, Network, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, ShieldCheck, SlidersHorizontal, SquareTerminal, TriangleAlert, X } from 'lucide-react';
 import { api, copyText, Logo, Button, IconButton, Badge } from './ui.jsx';
 import { Access, Settings, Logs, SubscriptionModal, NodeModal, ExportModal, ConfirmModal, ConfigModal, Guide } from './panels.jsx';
+import { PreProxyModal, BatchPreProxyModal } from './PreProxies.jsx';
 import { Login, Setup } from './Auth.jsx';
 import Nodes from './Nodes.jsx';
 import Overview from './Overview.jsx';
@@ -165,6 +166,7 @@ export default function App() {
           <div><h1>{pageInfo[route][0]}</h1><p>{pageInfo[route][1]}</p></div>
           <div className="heading-actions">
             <span className={`health-pill ${core.connected ? '' : 'offline'}`}><span className={`status-dot ${core.connected ? 'green' : 'gray'}`} />{core.connected ? '代理内核已连接' : '代理内核待连接'}</span>
+            {route === 'nodes' && <Button style={{ display: 'inline-flex' }} onClick={() => setModal({ type: 'pre-proxies' })}>前置代理</Button>}
             {route === 'nodes' && <Button onClick={() => setModal({ type: 'node' })}><Plus size={16} />添加节点</Button>}
             {['nodes', 'subscriptions'].includes(route) && <Button variant="primary" onClick={() => setModal({ type: 'subscription' })}><Plus size={17} />导入订阅</Button>}
           </div>
@@ -183,6 +185,8 @@ export default function App() {
     {toast && <div className={`toast ${toast.error ? 'error' : ''}`} role="status" key={toast.key}>{toast.error ? <TriangleAlert size={19} /> : <CheckCircle2 size={19} />}<span>{toast.message}</span><button aria-label="关闭提示" onClick={() => setToast(null)}><X size={16} /></button></div>}
     {modal?.type === 'subscription' && <SubscriptionModal {...context} subscription={modal.subscription} onClose={() => setModal(null)} />}
     {modal?.type === 'node' && <NodeModal {...context} node={modal.node} onClose={() => setModal(null)} />}
+    {modal?.type === 'pre-proxies' && <PreProxyModal {...context} onClose={() => setModal(null)} />}
+    {modal?.type === 'batch-pre-proxy' && <BatchPreProxyModal {...context} ids={modal.ids || EMPTY_IDS} onClose={() => setModal(null)} />}
     {modal?.type === 'export' && <ExportModal {...context} ids={modal.ids || EMPTY_IDS} onClose={() => setModal(null)} />}
     {modal?.type === 'delete' && <ConfirmModal title={modal.title} text={modal.text} confirm="确认删除" danger onClose={() => setModal(null)} onConfirm={modal.action} />}
     {modal?.type === 'apply' && <ConfirmModal title="应用当前配置" text={`将 ${enabled} 个启用映射及当前认证设置发送到 Mihomo。内核会重新加载监听端口，现有连接可能受到影响。`} confirm="应用到 Mihomo" onClose={() => setModal(null)} onConfirm={async () => { await mutate('/core/apply', 'POST', {}, '配置已应用'); await refreshCore(); }} />}

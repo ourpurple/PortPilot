@@ -17,8 +17,18 @@ func GenerateConfig(st State) ([]byte, error) {
 	controller, _ := url.Parse(settings.ControllerURL)
 	listeners := []map[string]any{}
 	proxies := []map[string]any{}
+	preProxies := map[string]PreProxy{}
+	for _, p := range st.PreProxies {
+		preProxies[p.ID] = p
+	}
+	usedPreProxies := map[string]bool{}
 	used := map[int]bool{}
 	for _, n := range st.Nodes {
+		if n.PreProxyID != "" {
+			if _, ok := preProxies[n.PreProxyID]; !ok {
+				return nil, fmt.Errorf("节点 %s 引用了不存在的前置代理", n.Name)
+			}
+		}
 		if !n.Enabled || !n.Available {
 			continue
 		}
@@ -34,6 +44,18 @@ func GenerateConfig(st State) ([]byte, error) {
 			p[k] = v
 		}
 		p["name"] = configName(n)
+		if n.PreProxyID != "" {
+			p["dialer-proxy"] = preProxyConfigName(n.PreProxyID)
+			if !usedPreProxies[n.PreProxyID] {
+				pre := map[string]any{}
+				for k, v := range preProxies[n.PreProxyID].Config {
+					pre[k] = v
+				}
+				pre["name"] = preProxyConfigName(n.PreProxyID)
+				proxies = append(proxies, pre)
+				usedPreProxies[n.PreProxyID] = true
+			}
+		}
 		proxies = append(proxies, p)
 		listeners = append(listeners, map[string]any{"name": fmt.Sprintf("in-%d", n.Port), "type": "mixed", "listen": settings.ListenHost, "port": n.Port, "udp": settings.UDP, "proxy": configName(n), "users": []map[string]string{{"username": settings.Username, "password": settings.Password}}})
 	}
