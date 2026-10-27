@@ -328,6 +328,23 @@ func applyTransport(p map[string]any, q uriParams) error {
 			return err
 		}
 		q.copy(opts, "early-data-header-name")
+	case "xhttp":
+		// Mihomo v1.19.32 implements XHTTP only for VLESS.
+		if p["type"] != "vless" {
+			return fmt.Errorf("Mihomo 的 XHTTP 传输仅支持 VLESS，请检查节点协议")
+		}
+		q.copy(opts, "host")
+		q.copy(opts, "path")
+		mode := q.get("mode")
+		if mode == "" {
+			mode = "auto"
+		}
+		switch mode {
+		case "auto", "stream-one", "stream-up", "packet-up":
+			opts["mode"] = mode
+		default:
+			return fmt.Errorf("XHTTP mode 参数须为 auto、stream-one、stream-up 或 packet-up")
+		}
 	case "grpc":
 		if service := q.get("serviceName", "grpc-service-name", "path"); service != "" {
 			opts["grpc-service-name"] = service

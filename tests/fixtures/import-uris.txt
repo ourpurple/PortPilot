@@ -5,6 +5,10 @@ vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=tls&type=grp
 vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=tls&type=httpupgrade&path=%2Fupgrade#VLESS-Upgrade
 vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=tls&type=h2&host=cdn.example&path=%2Fh2#VLESS-H2
 vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:8080?type=tcp&headerType=http&host=cdn.example&path=%2Fhttp#VLESS-HTTP
+vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?encryption=none&security=reality&pbk=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE&fp=chrome&sni=example.com&type=xhttp&host=192.0.2.82&path=%2F&mode=auto#VLESS-XHTTP-Reality-Auto
+vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=reality&pbk=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE&sid=abcd&fp=chrome&sni=example.com&type=xhttp&host=cdn.example&path=%2Fxhttp&mode=stream-one#VLESS-XHTTP-Stream-One
+vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=tls&sni=example.com&type=xhttp&host=cdn.example&path=%2Fxhttp&mode=stream-up#VLESS-XHTTP-Stream-Up
+vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=tls&sni=example.com&type=xhttp&host=cdn.example&path=%2Fxhttp&mode=packet-up#VLESS-XHTTP-Packet-Up
 vmess://eyJ2IjogIjIiLCAicHMiOiAiVk1lc3MtV1MiLCAiYWRkIjogIjEyNy4wLjAuMSIsICJwb3J0IjogIjQ0MyIsICJpZCI6ICIxMjM0NTY3OC0xMjM0LTEyMzQtMTIzNC0xMjM0NTY3ODlhYmMiLCAiYWlkIjogMCwgInNjeSI6ICJhdXRvIiwgIm5ldCI6ICJ3cyIsICJ0eXBlIjogIm5vbmUiLCAiaG9zdCI6ICJjZG4uZXhhbXBsZSIsICJwYXRoIjogIi92bWVzcyIsICJ0bHMiOiAidGxzIiwgInNuaSI6ICJleGFtcGxlLmNvbSJ9
 ss://YWVzLTEyOC1nY206c2FtcGxlLXBhc3N3b3Jk@127.0.0.1:8388?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dcdn.example#SS-SIP002
 ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpzYW1wbGUtcGFzc3dvcmRAMTI3LjAuMC4xOjgzODg#SS-Legacy

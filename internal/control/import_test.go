@@ -77,6 +77,15 @@ func TestImportShareProtocolOptions(t *testing.T) {
 		{"vless grpc", "vless://" + importUUID + "@v.example:443?type=grpc&serviceName=my%2Bservice&security=tls#GRPC", map[string]any{
 			"grpc-opts": map[string]any{"grpc-service-name": "my+service"},
 		}},
+		{"vless xhttp reality", "vless://" + importUUID + "@v.example:443?encryption=none&security=reality&sni=player.vimeo.com&fp=chrome&pbk=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE&type=xhttp&host=192.0.2.82&path=%2F&mode=auto#XHTTP", map[string]any{
+			"name": "XHTTP", "type": "vless", "server": "v.example", "port": 443, "uuid": importUUID, "tls": true, "servername": "player.vimeo.com", "client-fingerprint": "chrome", "reality-opts": map[string]any{"public-key": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE"}, "network": "xhttp", "xhttp-opts": map[string]any{"host": "192.0.2.82", "path": "/", "mode": "auto"},
+		}},
+		{"vless xhttp defaults", "vless://" + importUUID + "@v.example:443?type=xhttp#XHTTP", map[string]any{
+			"network": "xhttp", "xhttp-opts": map[string]any{"mode": "auto"},
+		}},
+		{"vless xhttp encoded path", "vless://" + importUUID + "@v.example:443?security=tls&type=XHTTP&host=cdn.example&path=%2Fupload%2Bdata%3Fkey%3Da+b&mode=packet-up#XHTTP", map[string]any{
+			"tls": true, "network": "xhttp", "xhttp-opts": map[string]any{"host": "cdn.example", "path": "/upload+data?key=a+b", "mode": "packet-up"},
+		}},
 		{"http upgrade", "vless://" + importUUID + "@v.example:443?type=httpupgrade&path=%2Fupgrade#Upgrade", map[string]any{
 			"network": "ws", "ws-opts": map[string]any{"path": "/upgrade", "v2ray-http-upgrade": true},
 		}},
@@ -147,6 +156,34 @@ func TestImportShareProtocolOptions(t *testing.T) {
 	}
 }
 
+func TestImportXHTTPModesAndYAMLRoundtrip(t *testing.T) {
+	for _, mode := range []string{"", "auto", "stream-one", "stream-up", "packet-up"} {
+		t.Run("mode="+mode, func(t *testing.T) {
+			uri := "vless://" + importUUID + "@v.example:443?security=tls&type=xhttp&host=cdn.example&path=%2Fxhttp&mode=" + mode + "#XHTTP"
+			proxies, err := parseProxies([]byte(uri))
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantMode := mode
+			if wantMode == "" {
+				wantMode = "auto"
+			}
+			want := map[string]any{"host": "cdn.example", "path": "/xhttp", "mode": wantMode}
+			if got := proxies[0]["xhttp-opts"]; !reflect.DeepEqual(got, want) {
+				t.Fatalf("xhttp-opts = %#v; want %#v", got, want)
+			}
+			canonical, err := marshalImportedProxies(proxies)
+			if err != nil {
+				t.Fatal(err)
+			}
+			roundtrip, err := parseProxies(canonical)
+			if err != nil || !reflect.DeepEqual(roundtrip, proxies) {
+				t.Fatalf("XHTTP YAML did not roundtrip: %v", err)
+			}
+		})
+	}
+}
+
 func TestImportRejectsMalformedInputWithoutLeakingCredentials(t *testing.T) {
 	secret := "secret-should-not-leak"
 	for _, input := range []string{
@@ -155,6 +192,9 @@ func TestImportRejectsMalformedInputWithoutLeakingCredentials(t *testing.T) {
 		"vless://" + secret + "@example:0", "vless://" + secret + "@example:65536", "vless://" + secret + "@example:443?security=reality",
 		"vless://" + secret + "@example:443?type=quic", "vless://" + secret + "@example:443?insecure=maybe", "vless://" + secret + "@example:443?security=xtls",
 		"vless://" + secret + "@example:443?path=%ZZ", "vless://@example:443", "vless://" + secret + "@[bad:ipv6]:443",
+		"vless://" + secret + "@example:443?type=xhttp&mode=" + secret,
+		"trojan://" + secret + "@example:443?type=xhttp",
+		"vmess://" + b64(`{"add":"example","id":"`+secret+`","port":443,"net":"xhttp"}`),
 		"vmess://invalid!", "vmess://" + b64(`{"add":"example","id":"`+secret+`","port":-1}`),
 		"vmess://" + b64(`{"add":"example","id":"`+secret+`","port":443,"aid":"invalid"}`),
 		"vmess://" + b64(`{"add":"example","id":"`+secret+`","port":443} trailing`),
@@ -175,7 +215,11 @@ func TestImportRejectsMalformedInputWithoutLeakingCredentials(t *testing.T) {
 			t.Errorf("error leaked credentials: %v", err)
 		}
 	}
-	_, err := parseProxies([]byte("anytls://password@example:443#First\n\n# comment\nvless://bad@example:70000"))
+	_, err := parseProxies([]byte("anytls://password@example:443#First\nvless://" + secret + "@example:443?type=xhttp&mode=invalid"))
+	if err == nil || !strings.Contains(err.Error(), "第 2 行") || !strings.Contains(err.Error(), "XHTTP") {
+		t.Fatalf("missing XHTTP source line or mode error: %v", err)
+	}
+	_, err = parseProxies([]byte("anytls://password@example:443#First\n\n# comment\nvless://bad@example:70000"))
 	if err == nil || !strings.Contains(err.Error(), "第 4 行") {
 		t.Fatalf("missing source line number: %v", err)
 	}

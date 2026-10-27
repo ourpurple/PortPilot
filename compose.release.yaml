@@ -2,7 +2,7 @@
 name: portpilot
 
 x-portpilot: &portpilot
-  image: ${PORTPILOT_IMAGE_REPOSITORY:-ghcr.io/ourpurple/portpilot}:${PORTPILOT_IMAGE_TAG:-0.1.4}
+  image: ${PORTPILOT_IMAGE_REPOSITORY:-ghcr.io/ourpurple/portpilot}:${PORTPILOT_IMAGE_TAG:-0.1.5}
   user: "10001:10001"
   read_only: true
   security_opt:

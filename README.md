@@ -2,7 +2,7 @@
 
 **一个节点，一个固定入口。**
 
-[![CI](https://github.com/maodeyu180/PortPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/maodeyu180/PortPilot/actions/workflows/ci.yml)
+[![CI](https://github.com/ourpurple/PortPilot/actions/workflows/ci.yml/badge.svg)](https://github.com/ourpurple/PortPilot/actions/workflows/ci.yml)
 
 蓝白主题、轻量自托管的 Mihomo 订阅管理面板。把订阅与节点分享链接映射为带账号密码的 HTTP / SOCKS5 端口，在浏览器、脚本和工具里直接使用。
 
@@ -26,14 +26,14 @@ socks5h://用户名:密码@服务器:20001
 
 ## Docker Compose 启动（Linux，推荐）
 
-直接使用已发布的 Docker Hub 镜像 `maodeyu/portpilot:0.1.3`，支持 amd64 / arm64。服务器只需要 Docker Engine、Docker Compose v2 和 curl，**不用 clone 源码，也不用安装 Node 或 Go**。
+使用此 fork 的 GHCR 镜像 `ghcr.io/ourpurple/portpilot:0.1.5`，支持 amd64 / arm64。服务器只需要 Docker Engine、Docker Compose v2 和 curl，**不用 clone 源码，也不用安装 Node 或 Go**。镜像在版本标签的发布工作流成功后可用。
 
 在服务器下载一份 Compose 文件即可启动：
 
 ```sh
 mkdir portpilot
 cd portpilot
-curl -fsSL https://raw.githubusercontent.com/maodeyu180/PortPilot/main/compose.release.yaml -o compose.yaml
+curl -fsSL https://raw.githubusercontent.com/ourpurple/PortPilot/main/compose.release.yaml -o compose.yaml
 docker compose pull
 docker compose up -d --wait
 ```
@@ -46,7 +46,7 @@ docker compose up -d --wait
 
 **每个代理端口都强制使用账号密码，HTTP 与 SOCKS5 共用一组凭据。** 管理密码与代理密码互相独立。
 
-首次启动不需要 `.env`。要提前指定管理密码、调整管理端口或切换到 GHCR，可在 `compose.yaml` 旁创建 `.env`，见 [部署说明](docs/deployment.md)。数据保存在 `portpilot_data` 命名卷中，升级和重建容器会保留。
+首次启动不需要 `.env`。要提前指定管理密码、调整管理端口或切换镜像仓库，可在 `compose.yaml` 旁创建 `.env`，见 [部署说明](docs/deployment.md)。数据保存在 `portpilot_data` 命名卷中，升级和重建容器会保留。
 
 原始文件：[镜像部署 Compose](compose.release.yaml)。源码构建方式见下方「从源码构建」。
 
@@ -182,7 +182,7 @@ PORTPILOT_ADMIN_PASSWORD='请替换为至少12位的管理密码' \
 - 修改端口范围不会自动重排已有端口；新范围必须包含已有映射。
 - 仅提取节点，不执行来源中的规则、脚本、远程 UI 或 TUN 设置。使用 `dialer-proxy` 的链式节点暂不支持。
 - 支持单个 YAML / JSON 节点、`proxies` 配置、节点数组、每行一条的分享链接，以及这些内容的标准 / URL-safe Base64（允许换行和省略补位）。单次上限 5 MiB、2000 个节点。
-- 分享链接支持 VLESS、VMess（Base64 JSON）、Shadowsocks（SIP002 / 旧版）、SSR、Trojan、AnyTLS、Hysteria、Hysteria2 / HY2、TUIC v5、HTTP / HTTPS、SOCKS / SOCKS5 / SOCKS5H。VLESS / VMess / Trojan 支持 TCP、WS、HTTP、H2、gRPC、HTTPUpgrade；保留适用协议的 TLS / Reality、SNI、ALPN、指纹与认证参数。其他协议和传输方式请使用 Mihomo YAML。
+- 分享链接支持 VLESS、VMess（Base64 JSON）、Shadowsocks（SIP002 / 旧版）、SSR、Trojan、AnyTLS、Hysteria、Hysteria2 / HY2、TUIC v5、HTTP / HTTPS、SOCKS / SOCKS5 / SOCKS5H。VLESS / VMess / Trojan 支持 TCP、WS、HTTP、H2、gRPC、HTTPUpgrade；VLESS 额外支持 XHTTP（`host`、`path`、`mode`，兼容 TLS / Reality，需支持 XHTTP 的 Mihomo，例如 v1.19.32）。XHTTP 的 `mode` 支持 `auto`（默认）、`stream-one`、`stream-up`、`packet-up`。保留适用协议的 TLS / Reality、SNI、ALPN、指纹与认证参数。其他协议、传输方式或 XHTTP 高级配置请使用 Mihomo YAML。
 - 「添加节点」的“识别并转换”只预览，不保存或连接上游；可跳过转换直接导入。端口留空时自动分配，填写时按输入顺序连续分配。格式错误、重名或端口冲突会取消整批操作，不会保存部分节点。
 - 连接测试测量内核访问测试 URL 的延迟，**不代表公网端口已放行或出口 IP 已核实**。
 - 「实际出口 IP」通过对应节点的本机认证代理入口查询 [ipify](https://www.ipify.org/)，支持 IPv4 / IPv6。查询前需启用节点并应用配置；结果按查询时间展示，节点配置变更或订阅同步后会清除，查询失败不会使用本机直连结果代替。
